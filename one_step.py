@@ -25,14 +25,17 @@ def implicit_euler(f, f_prime, x_0, y_0, h, n):
     # iterate through
     for i in range(n-1):
         # do two steps of Newton root-finding iteration to find the next slope
+        # create a function to find zeroes
         big_f = lambda y_m: y_m - ys[i] - h*f(xs[i+1], y_m)
         big_f_prime = lambda y_m: 1 - h*f_prime(xs[i+1], y_m)
-        iter_1 = newton_step(big_f, big_f_prime, ys[i])
-        iter_2 = newton_step(big_f, big_f_prime, iter_1)
-        ys.append(iter_2)
+        ys.append(root_find(big_f, big_f_prime, ys[i], 1))
 
     return xs, ys
 
 
-def newton_step(f, f_prime, y_m):
-    return y_m - f(y_m)/f_prime(y_m)
+def root_find(f, f_prime, init_guess, steps):
+    x = init_guess
+    for _ in range(steps):
+        x = x - f(x)/f_prime(x)
+
+    return x
