@@ -199,14 +199,14 @@ def generate_runge_kutta(a, b):
             raise TypeError("'a' and 'b' should both be 2-dimensional.")
 
         # then, ensure they are both column vectors
-        if not b.shape[2] == 1:
+        if not b.shape[1] == 1:
             raise TypeError("'b' should be a column vectors.")
 
         # number of stages is then this
-        n_stages = b.shape[1]
+        n_stages = b.shape[0]
 
         # make sure a fits also
-        if not (a.shape[1] == a.shape[2] == n_stages):
+        if not (a.shape[0] == a.shape[1] == n_stages):
             raise TypeError("'a' must be square and compatible with 'b'.")
 
         # set c
@@ -219,7 +219,7 @@ def generate_runge_kutta(a, b):
             explicit = True
     else:
         # check strictly lower triangular
-        if a == np.tril(a, -1):
+        if np.allclose(a, np.tril(a, -1)):
             explicit = True
 
     # form function
@@ -265,6 +265,56 @@ def generate_runge_kutta(a, b):
                 else:
                     for i in range(n_pts-1):
                         ys.append(ys[i] + h*b*f(xs[i], ys[i]))
+
+                return xs, np.array(ys)
+        else:
+            def rk_method(x_0, y_0, h, **kwargs):
+                """
+
+                :param x_0:
+                :param y_0:
+                :param h:
+                :param kwargs:
+                :return (xs, ys):
+                """
+
+                # linear or nonlinear
+                if 'p' in kwargs.keys() and 'q' in kwargs.keys():
+                    linear = True
+                    p = kwargs['p']
+                    q = kwargs['q']
+                elif 'f' in kwargs.keys():
+                    linear = False
+                    f = kwargs['f']
+                else:
+                    raise TypeError("You must pass keyword arguments 'p' and 'q', or 'f'.")
+
+                # number of points
+                if 'n_pts' in kwargs.keys():
+                    n_pts = kwargs['n_pts']
+                elif 'x_max' in kwargs.keys():
+                    n_pts = int(kwargs['x_max']/h)
+                else:
+                    raise TypeError("You must pass either keyword arguments 'n_pts' or 'x_max'.")
+
+                # form output
+                xs = np.linspace(x_0, x_0 + h * n_pts, n_pts)
+                ys = [y_0]
+
+                # solve
+                if linear:
+                    for m in range(n_pts-1):
+                        y_next = ys[m]
+                        ks = []
+                        for i in range(n_stages):
+                            # find k_i
+                            # to do that, find the y co-ordinate
+                            y_k = ys[m]
+                            for j in range(i):  # we know it's explicit, so we don't need to iterate over the zeros
+                                y_k += h*a[i, j]*ks[j]
+                            ks.append(q(xs[m] + h*c[i]) - y_k*p(xs[m] + h*c[i]))
+                            y_next += h*b[i, 0]*ks[i]
+                        ys.append(y_next)
 
                 return xs, np.array(ys)
 
